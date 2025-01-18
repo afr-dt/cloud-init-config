@@ -1,0 +1,124 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+password: root
+chpasswd:
+  expire: false
+  users:
+    - name: ubuntu
+      password: root
+      type: text
+
+groups:
+  - sudo
+
+system_info:
+  default_user:
+    name: ubuntu
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - software-properties-common
+  - python3-pip
+  - git
+  - unzip
+  - zsh
+  - fonts-powerline
+  - fzf
+  - tmux
+  - htop
+  - build-essential
+  - jq
+
+write_files:
+  - path: /etc/profile.d/custom_path.sh
+    permissions: "0644"
+    content: |
+      export PATH=$PATH:/usr/local/bin:/usr/local/go/bin:$HOME/go/bin:/snap/bin
+
+  - path: /tmp/install_tools.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      set -e
+      export DEBIAN_FRONTEND=noninteractive
+
+      # Function to check if a command exists
+      command_exists() {
+        command -v "$1" >/dev/null 2>&1
+      }
+
+      # Install Go
+      if ! command_exists go; then
+        echo "Installing Go..."
+        curl -OL https://golang.org/dl/go1.23.5.linux-arm64.tar.gz
+        sudo tar -C /usr/local -xzf go1.23.5.linux-arm64.tar.gz
+        rm go1.23.5.linux-arm64.tar.gz
+      fi
+
+      # Install Terraform
+      if ! command_exists terraform; then
+        echo "Installing Terraform..."
+        curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+        echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+        sudo apt-get update && sudo apt-get install -y terraform
+      fi
+
+      # Install gcloud CLI
+      if ! command_exists gcloud; then
+        echo "Installing gcloud CLI..."
+        sudo snap install google-cloud-cli --classic
+      fi
+
+      # Install AWS CLI
+      if ! command_exists aws; then
+        echo "Installing AWS CLI..."
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install
+        rm -rf aws awscliv2.zip
+      fi
+
+      # Install Azure CLI
+      if ! command_exists az; then
+        echo "Installing Azure CLI..."
+        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+      fi
+
+      # Install kubectl
+      if ! command_exists kubectl; then
+        echo "Installing kubectl..."
+        sudo snap install kubectl --classic
+      fi
+
+      # Install k9s CLI
+      if ! command_exists k9s; then
+        echo "Installing k9s CLI..."
+        curl -sL "https://github.com/derailed/k9s/releases/download/v0.27.4/k9s_Linux_arm64.tar.gz" | tar xz -C /tmp
+        sudo mv /tmp/k9s /usr/local/bin
+      fi
+
+      # Install neovim
+      if ! command_exists nvim; then
+        echo "Installing neovim..."
+        sudo snap install nvim --classic
+      fi
+
+      # Install LazyVim
+      if ! command_exists nvim; then
+        echo "Installing LazyVim..."
+        git clone https://github.com/LazyVim/starter ~/.config/nvim
+        rm -rf ~/.config/nvim/.git
+        echo "alias vim='nvim'" >> ~/.zshrc
+      fi
+
+runcmd:
+  - source /etc/profile.d/custom_path.sh
+  - bash /tmp/install_tools.sh
