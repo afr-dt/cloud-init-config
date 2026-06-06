@@ -18,6 +18,7 @@ system_info:
   default_user:
     name: ubuntu
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    shell: /bin/zsh
 
 packages:
   - apt-transport-https
@@ -26,7 +27,6 @@ packages:
   - gnupg
   - lsb-release
   - software-properties-common
-  - python3-pip
   - git
   - unzip
   - zsh
@@ -36,12 +36,15 @@ packages:
   - htop
   - build-essential
   - jq
+  - neovim
+  - ripgrep
+  - fd-find
 
 write_files:
   - path: /etc/profile.d/custom_path.sh
     permissions: "0644"
     content: |
-      export PATH=$PATH:/usr/local/bin:/usr/local/go/bin:$HOME/go/bin:/snap/bin
+      export PATH=$PATH:/usr/local/bin:/usr/local/go/bin:$HOME/go/bin:/snap/bin:$HOME/.local/bin
 
   - path: /tmp/install_tools.sh
     permissions: "0755"
@@ -55,12 +58,24 @@ write_files:
         command -v "$1" >/dev/null 2>&1
       }
 
+      # Detect Architecture
+      ARCH=$(uname -m)
+      if [ "$ARCH" = "x86_64" ]; then
+          GO_ARCH="amd64"
+          AWS_ARCH="x86_64"
+          K9S_ARCH="x86_64"
+      else
+          GO_ARCH="arm64"
+          AWS_ARCH="aarch64"
+          K9S_ARCH="arm64"
+      fi
+
       # Install Go
       if ! command_exists go; then
-        echo "Installing Go..."
-        curl -OL https://golang.org/dl/go1.23.5.linux-arm64.tar.gz
-        sudo tar -C /usr/local -xzf go1.23.5.linux-arm64.tar.gz
-        rm go1.23.5.linux-arm64.tar.gz
+        echo "Installing Go ($GO_ARCH)..."
+        curl -OL "https://golang.org/dl/go1.23.5.linux-${GO_ARCH}.tar.gz"
+        sudo tar -C /usr/local -xzf "go1.23.5.linux-${GO_ARCH}.tar.gz"
+        rm "go1.23.5.linux-${GO_ARCH}.tar.gz"
       fi
 
       # Install Terraform
@@ -79,8 +94,8 @@ write_files:
 
       # Install AWS CLI
       if ! command_exists aws; then
-        echo "Installing AWS CLI..."
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
+        echo "Installing AWS CLI ($AWS_ARCH)..."
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-${AWS_ARCH}.zip" -o "awscliv2.zip"
         unzip awscliv2.zip
         sudo ./aws/install
         rm -rf aws awscliv2.zip
@@ -94,19 +109,47 @@ write_files:
 
       # Install k9s CLI
       if ! command_exists k9s; then
-        echo "Installing k9s CLI..."
-        curl -sL "https://github.com/derailed/k9s/releases/download/v0.27.4/k9s_Linux_arm64.tar.gz" | tar xz -C /tmp
+        echo "Installing k9s CLI ($K9S_ARCH)..."
+        curl -sL "https://github.com/derailed/k9s/releases/download/v0.27.4/k9s_Linux_${K9S_ARCH}.tar.gz" | tar xz -C /tmp
         sudo mv /tmp/k9s /usr/local/bin
       fi
 
-      # Install LazyVim
-      if ! command_exists nvim; then
-        echo "Installing LazyVim..."
-        git clone https://github.com/LazyVim/starter ~/.config/nvim
-        rm -rf ~/.config/nvim/.git
-        echo "alias vim='nvim'" >> ~/.zshrc
+      # Install uv and Python 3.13 for ubuntu user
+      if ! command_exists uv; then
+        echo "Installing uv..."
+        curl -LsSf https://astral.sh/uv/install.sh | sudo -u ubuntu sh
+        
+        echo "Installing Python 3.13 via uv..."
+        sudo -u ubuntu -i bash -c 'uv python install 3.13'
+      fi
+
+      # Install nvm and Node.js LTS for ubuntu user
+      if [ ! -d "/home/ubuntu/.nvm" ]; then
+        echo "Installing nvm (v0.40.1)..."
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | sudo -u ubuntu bash
+        
+        echo "Installing Node.js LTS via nvm..."
+        sudo -u ubuntu -i bash -c '
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          nvm install --lts
+        '
+      fi
+
+      # Install LazyVim for ubuntu user
+      if [ ! -d "/home/ubuntu/.config/nvim" ]; then
+        echo "Installing LazyVim for ubuntu user..."
+        mkdir -p /home/ubuntu/.config
+        git clone https://github.com/LazyVim/starter /home/ubuntu/.config/nvim
+        rm -rf /home/ubuntu/.config/nvim/.git
+        chown -R ubuntu:ubuntu /home/ubuntu/.config/nvim
+        
+        # Add alias to .zshrc
+        echo "alias vim='nvim'" >> /home/ubuntu/.zshrc
+        chown ubuntu:ubuntu /home/ubuntu/.zshrc
       fi
 
 runcmd:
   - source /etc/profile.d/custom_path.sh
   - bash /tmp/install_tools.sh
+  - [ chsh, -s, /bin/zsh, ubuntu ]
