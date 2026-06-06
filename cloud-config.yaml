@@ -1,4 +1,4 @@
-#cloud-config
+# cloud-config
 
 package_update: true
 package_upgrade: true
@@ -86,12 +86,6 @@ write_files:
         rm -rf aws awscliv2.zip
       fi
 
-      # Install Azure CLI
-      if ! command_exists az; then
-        echo "Installing Azure CLI..."
-        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-      fi
-
       # Install kubectl
       if ! command_exists kubectl; then
         echo "Installing kubectl..."
@@ -103,12 +97,6 @@ write_files:
         echo "Installing k9s CLI..."
         curl -sL "https://github.com/derailed/k9s/releases/download/v0.27.4/k9s_Linux_arm64.tar.gz" | tar xz -C /tmp
         sudo mv /tmp/k9s /usr/local/bin
-      fi
-
-      # Install neovim
-      if ! command_exists nvim; then
-        echo "Installing neovim..."
-        sudo snap install nvim --classic
       fi
 
       # Install LazyVim
