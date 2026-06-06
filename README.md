@@ -9,7 +9,9 @@ A pre-configured Ubuntu `cloud-init` configuration for [Multipass](https://multi
 - **Modern Development Experience**: Includes Zsh, Tmux, and Neovim (LazyVim).
 
 ## 🛠 Tools Included
-- **Programming**: Go (v1.23.5), Python3, Pip, Build-essential.
+- **Programming**: Go (v1.23.5), Python (v3.13 managed by uv), Node.js (LTS managed by nvm), Build-essential.
+- **Python Management**: uv (Astral's fast Python manager).
+- **Node.js Management**: nvm (Node Version Manager).
 - **Infrastructure**: Terraform.
 - **Cloud CLIs**: AWS CLI v2, Google Cloud CLI (gcloud).
 - **Kubernetes**: kubectl, k9s.
