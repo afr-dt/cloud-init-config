@@ -25,17 +25,33 @@ A pre-configured Ubuntu `cloud-init` configuration for [Multipass](https://multi
 Ensure [Multipass](https://multipass.run/install) is installed on your system.
 
 ### 2. Launch the Instance
-Run one of the following commands from the project root:
+Run one of the following commands from the project root. We recommend specifying resource limits to prevent the VM from consuming too many host resources:
 
 **Latest LTS (Recommended):**
 ```bash
-multipass launch lts --name devops-instance --cloud-init ./cloud-config.yaml
+multipass launch lts \
+  --name devops-instance \
+  --cpus 2 \
+  --memory 4G \
+  --disk 20G \
+  --cloud-init ./cloud-config.yaml
 ```
 
 **Specific Version (e.g., 24.04):**
 ```bash
-multipass launch 24.04 --name devops-instance --cloud-init ./cloud-config.yaml
+multipass launch 24.04 \
+  --name devops-instance \
+  --cpus 2 \
+  --memory 4G \
+  --disk 20G \
+  --cloud-init ./cloud-config.yaml
 ```
+
+#### 💡 Resource Customization
+Since hardware resources are managed by the host's hypervisor, they must be specified during launch:
+- `--cpus <count>`: Number of CPU cores (default: 1).
+- `--memory <size>`: RAM allocation (e.g., `4G`, `2048M`, default: 1G).
+- `--disk <size>`: Total disk space (e.g., `20G`, `50G`, default: 5G).
 
 #### 💡 Specifying Ubuntu Versions
 You can customize the Ubuntu release by providing the version number or codename as the first argument to `multipass launch`.
