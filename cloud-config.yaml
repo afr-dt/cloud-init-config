@@ -1,24 +1,18 @@
 # cloud-config
 
 package_update: true
-package_upgrade: true
+package_upgrade: false
 
-password: root
-chpasswd:
-  expire: false
-  users:
-    - name: ubuntu
-      password: root
-      type: text
-
-groups:
-  - sudo
-
-system_info:
-  default_user:
-    name: ubuntu
+users:
+  - name: ubuntu
+    groups: [sudo, admin]
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     shell: /bin/zsh
+    lock_passwd: false
+    passwd: "$6$rounds=4096$Si6L7R1k0S.K7G$9XkI5Gj.9G/mXvP3YvV9rY9W.VfO1G.VfO1G.VfO1G.VfO1G.VfO1G.VfO1"
+
+chpasswd:
+  expire: false
 
 packages:
   - apt-transport-https
@@ -51,33 +45,25 @@ write_files:
     permissions: "0644"
     content: |
       add_newline = true
-
       [character]
       success_symbol = "[➜](bold green)"
       error_symbol = "[➜](bold red)"
-
       [aws]
       symbol = " "
       style = "bold #ff9900"
-
       [gcloud]
       symbol = " "
       style = "bold #4285f4"
-
       [kubernetes]
       symbol = "☸ "
       style = "bold blue"
       disabled = false
-
       [terraform]
       symbol = "󱁢 "
-
       [python]
       symbol = " "
-
       [nodejs]
       symbol = " "
-
       [golang]
       symbol = " "
 
@@ -85,116 +71,89 @@ write_files:
     permissions: "0755"
     content: |
       #!/bin/bash
-      set -e
-      export DEBIAN_FRONTEND=noninteractive
+      set -x
+      exec > >(tee -a /tmp/install_tools.log) 2>&1
 
-      # Function to check if a command exists
-      command_exists() {
-        command -v "$1" >/dev/null 2>&1
+      echo "Starting installation script at $(date)"
+
+      wait_for_apt() {
+        while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/lib/dpkg/lock >/dev/null 2>&1; do
+          echo "Waiting for apt locks..."
+          sleep 5
+        done
       }
 
-      # Detect Architecture
+      # Architecture Detection
       ARCH=$(uname -m)
       if [ "$ARCH" = "x86_64" ]; then
-          GO_ARCH="amd64"
-          AWS_ARCH="x86_64"
-          K9S_ARCH="x86_64"
+          GO_ARCH="amd64"; AWS_ARCH="x86_64"; K9S_ARCH="x86_64"
       else
-          GO_ARCH="arm64"
-          AWS_ARCH="aarch64"
-          K9S_ARCH="arm64"
+          GO_ARCH="arm64"; AWS_ARCH="aarch64"; K9S_ARCH="arm64"
       fi
 
-      # Install Go
-      if ! command_exists go; then
-        echo "Installing Go ($GO_ARCH)..."
+      wait_for_apt
+
+      # 1. Install Go (Global)
+      if ! command -v go >/dev/null; then
         curl -OL "https://golang.org/dl/go1.23.5.linux-${GO_ARCH}.tar.gz"
-        sudo tar -C /usr/local -xzf "go1.23.5.linux-${GO_ARCH}.tar.gz"
+        tar -C /usr/local -xzf "go1.23.5.linux-${GO_ARCH}.tar.gz"
         rm "go1.23.5.linux-${GO_ARCH}.tar.gz"
       fi
 
-      # Install Terraform
-      if ! command_exists terraform; then
-        echo "Installing Terraform..."
-        curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-        echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-        sudo apt-get update && sudo apt-get install -y terraform
+      # 2. Install Terraform (Global)
+      if ! command -v terraform >/dev/null; then
+        curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+        echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
+        wait_for_apt
+        apt-get update && apt-get install -y terraform
       fi
 
-      # Install gcloud CLI
-      if ! command_exists gcloud; then
-        echo "Installing gcloud CLI..."
-        sudo snap install google-cloud-cli --classic
-      fi
+      # 3. Install Snaps
+      snap install google-cloud-cli --classic
+      snap install kubectl --classic
 
-      # Install AWS CLI
-      if ! command_exists aws; then
-        echo "Installing AWS CLI ($AWS_ARCH)..."
+      # 4. Install AWS CLI
+      if ! command -v aws >/dev/null; then
         curl "https://awscli.amazonaws.com/awscli-exe-linux-${AWS_ARCH}.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
-        sudo ./aws/install
+        unzip -q awscliv2.zip
+        ./aws/install
         rm -rf aws awscliv2.zip
       fi
 
-      # Install kubectl
-      if ! command_exists kubectl; then
-        echo "Installing kubectl..."
-        sudo snap install kubectl --classic
-      fi
-
-      # Install k9s CLI
-      if ! command_exists k9s; then
-        echo "Installing k9s CLI ($K9S_ARCH)..."
+      # 5. Install k9s
+      if ! command -v k9s >/dev/null; then
         curl -sL "https://github.com/derailed/k9s/releases/download/v0.27.4/k9s_Linux_${K9S_ARCH}.tar.gz" | tar xz -C /tmp
-        sudo mv /tmp/k9s /usr/local/bin
+        mv /tmp/k9s /usr/local/bin/
       fi
 
-      # Install uv and Python 3.13 for ubuntu user
-      if ! command_exists uv; then
-        echo "Installing uv..."
-        curl -LsSf https://astral.sh/uv/install.sh | sudo -u ubuntu sh
-        
-        echo "Installing Python 3.13 via uv..."
-        sudo -u ubuntu -i bash -c 'uv python install 3.13'
-      fi
+      # 6. USER LEVEL TOOLS (Executed as ubuntu)
+      echo "Starting User Level Tools..."
 
-      # Install nvm and Node.js LTS for ubuntu user
-      if [ ! -d "/home/ubuntu/.nvm" ]; then
-        echo "Installing nvm (v0.40.1)..."
-        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | sudo -u ubuntu bash
-        
-        echo "Installing Node.js LTS via nvm..."
-        sudo -u ubuntu -i bash -c '
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-          nvm install --lts
-        '
-      fi
+      # UV & Python
+      sudo -u ubuntu -i bash -c "curl -LsSf https://astral.sh/uv/install.sh | sh && .local/bin/uv python install 3.13"
 
-      # Install Starship
-      if ! command_exists starship; then
-        echo "Installing Starship prompt..."
-        curl -sS https://starship.rs/install.sh | sh -s -- --yes
-        
-        # Initialize in .zshrc
-        echo 'eval "$(starship init zsh)"' >> /home/ubuntu/.zshrc
-        chown ubuntu:ubuntu /home/ubuntu/.zshrc
-      fi
+      # NVM & Node
+      sudo -u ubuntu -i bash -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash"
+      sudo -u ubuntu -i bash -c "export NVM_DIR=\"\$HOME/.nvm\" && [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\" && nvm install --lts"
 
-      # Install LazyVim for ubuntu user
+      # Starship
+      curl -sS https://starship.rs/install.sh | sh -s -- --yes
+
+      # LazyVim
       if [ ! -d "/home/ubuntu/.config/nvim" ]; then
-        echo "Installing LazyVim for ubuntu user..."
-        mkdir -p /home/ubuntu/.config
-        git clone https://github.com/LazyVim/starter /home/ubuntu/.config/nvim
+        sudo -u ubuntu git clone https://github.com/LazyVim/starter /home/ubuntu/.config/nvim
         rm -rf /home/ubuntu/.config/nvim/.git
-        chown -R ubuntu:ubuntu /home/ubuntu/.config/nvim
-        
-        # Add alias to .zshrc
-        echo "alias vim='nvim'" >> /home/ubuntu/.zshrc
-        chown ubuntu:ubuntu /home/ubuntu/.zshrc
       fi
+
+      # Configure .zshrc
+      sudo -u ubuntu touch /home/ubuntu/.zshrc
+      grep -q "starship init zsh" /home/ubuntu/.zshrc || echo 'eval "$(starship init zsh)"' >> /home/ubuntu/.zshrc
+      grep -q "alias vim='nvim'" /home/ubuntu/.zshrc || echo "alias vim='nvim'" >> /home/ubuntu/.zshrc
+      grep -q ".local/bin" /home/ubuntu/.zshrc || echo 'export PATH=$PATH:$HOME/.local/bin' >> /home/ubuntu/.zshrc
+
+      echo "Installation finished."
 
 runcmd:
-  - source /etc/profile.d/custom_path.sh
+  - . /etc/profile.d/custom_path.sh
   - bash /tmp/install_tools.sh
-  - [ chsh, -s, /bin/zsh, ubuntu ]
+  - chsh -s /bin/zsh ubuntu
