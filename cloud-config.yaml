@@ -46,6 +46,41 @@ write_files:
     content: |
       export PATH=$PATH:/usr/local/bin:/usr/local/go/bin:$HOME/go/bin:/snap/bin:$HOME/.local/bin
 
+  - path: /home/ubuntu/.config/starship.toml
+    owner: ubuntu:ubuntu
+    permissions: "0644"
+    content: |
+      add_newline = true
+
+      [character]
+      success_symbol = "[➜](bold green)"
+      error_symbol = "[➜](bold red)"
+
+      [aws]
+      symbol = " "
+      style = "bold #ff9900"
+
+      [gcloud]
+      symbol = " "
+      style = "bold #4285f4"
+
+      [kubernetes]
+      symbol = "☸ "
+      style = "bold blue"
+      disabled = false
+
+      [terraform]
+      symbol = "󱁢 "
+
+      [python]
+      symbol = " "
+
+      [nodejs]
+      symbol = " "
+
+      [golang]
+      symbol = " "
+
   - path: /tmp/install_tools.sh
     permissions: "0755"
     content: |
@@ -134,6 +169,16 @@ write_files:
           [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
           nvm install --lts
         '
+      fi
+
+      # Install Starship
+      if ! command_exists starship; then
+        echo "Installing Starship prompt..."
+        curl -sS https://starship.rs/install.sh | sh -s -- --yes
+        
+        # Initialize in .zshrc
+        echo 'eval "$(starship init zsh)"' >> /home/ubuntu/.zshrc
+        chown ubuntu:ubuntu /home/ubuntu/.zshrc
       fi
 
       # Install LazyVim for ubuntu user
