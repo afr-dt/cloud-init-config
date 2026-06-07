@@ -17,7 +17,7 @@ A pre-configured Ubuntu `cloud-init` configuration for [Multipass](https://multi
 - **Kubernetes**: kubectl, k9s.
 - **Utilities**: JQ, fzf, htop, tmux, unzip, curl, git.
 - **Editor**: Neovim (configured with LazyVim).
-- **Shell**: Zsh (Powerline fonts support).
+- **Shell**: Zsh (Powerline fonts support) with **Starship Prompt**.
 
 ## 🏁 Getting Started
 
@@ -25,10 +25,22 @@ A pre-configured Ubuntu `cloud-init` configuration for [Multipass](https://multi
 Ensure [Multipass](https://multipass.run/install) is installed on your system.
 
 ### 2. Launch the Instance
-Run the following command from the project root:
+Run one of the following commands from the project root:
+
+**Latest LTS (Recommended):**
 ```bash
-multipass launch --name devops-instance --cloud-init ./cloud-config.yaml
+multipass launch lts --name devops-instance --cloud-init ./cloud-config.yaml
 ```
+
+**Specific Version (e.g., 24.04):**
+```bash
+multipass launch 24.04 --name devops-instance --cloud-init ./cloud-config.yaml
+```
+
+#### 💡 Specifying Ubuntu Versions
+You can customize the Ubuntu release by providing the version number or codename as the first argument to `multipass launch`.
+- Use `multipass find` to see all available images.
+- Common aliases: `lts` (latest), `noble` (24.04), `jammy` (22.04).
 
 ### 3. Access the Shell
 Once the instance is running, connect to it:
