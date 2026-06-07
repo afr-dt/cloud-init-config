@@ -19,7 +19,6 @@ write_files:
     permissions: "0755"
     content: |
       #!/bin/bash
-      # Logging to both console and file
       exec > >(tee -a /var/log/custom_setup.log) 2>&1
       set -x
 
@@ -59,12 +58,20 @@ write_files:
         rm "go1.23.5.linux-${GO_ARCH}.tar.gz"
       fi
 
-      # Terraform
+      # Terraform (APT)
       if ! command -v terraform >/dev/null; then
         curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
         echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc/apt/sources.list.d/hashicorp.list
         wait_for_apt
         apt-get update && apt-get install -y terraform
+      fi
+
+      # Helm (APT - The official way for Ubuntu)
+      if ! command -v helm >/dev/null; then
+        curl https://baltocdn.com/helm/signing.asc | gpg --dearmor -o /usr/share/keyrings/helm.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" > /etc/apt/sources.list.d/helm-stable-debian.list
+        wait_for_apt
+        apt-get update && apt-get install -y helm
       fi
 
       # Cloud CLIs & Snaps
@@ -95,7 +102,6 @@ write_files:
       # Run user-level setup
       sudo -u ubuntu -i bash <<'U_EOF'
         set -x
-        
         # Oh My Zsh
         if [ ! -d "$HOME/.oh-my-zsh" ]; then
           sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
@@ -109,10 +115,8 @@ write_files:
         
         # Tools: UV, NVM
         curl -LsSf https://astral.sh/uv/install.sh | sh
-        
         if [ ! -d "$HOME/.nvm" ]; then
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-          # Load NVM to install Node LTS now
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
           nvm install --lts
@@ -125,7 +129,8 @@ write_files:
         cat <<'EOF_Z' > ~/.zshrc
         export ZSH="$HOME/.oh-my-zsh"
         ZSH_THEME="robbyrussell"
-        plugins=(git zsh-autosuggestions zsh-syntax-highlighting gcloud terraform docker)
+        
+        plugins=(git zsh-autosuggestions zsh-syntax-highlighting kubectl node nvm golang tmux fzf terraform aws helm gcloud)
         source $ZSH/oh-my-zsh.sh
 
         # NVM Configuration
