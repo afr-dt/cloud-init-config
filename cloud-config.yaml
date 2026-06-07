@@ -30,7 +30,7 @@ write_files:
         done
       }
 
-      # 1. System Packages (Including fastfetch and git)
+      # 1. System Packages
       wait_for_apt
       apt-get update
       wait_for_apt
@@ -42,14 +42,13 @@ write_files:
       ARCH=$(uname -m)
       [ "$ARCH" = "x86_64" ] && { GO_ARCH="amd64"; AWS_ARCH="x86_64"; K9S_ARCH="x86_64"; } || { GO_ARCH="arm64"; AWS_ARCH="aarch64"; K9S_ARCH="arm64"; }
 
-      # 3. Global Tools (Root)
+      # 3. Global Tools
+      curl -sS https://starship.rs/install.sh | sh -s -- --yes
+
       # Go
       curl -OL "https://golang.org/dl/go1.23.5.linux-${GO_ARCH}.tar.gz"
       tar -C /usr/local -xzf "go1.23.5.linux-${GO_ARCH}.tar.gz"
       rm "go1.23.5.linux-${GO_ARCH}.tar.gz"
-
-      # Starship
-      curl -sS https://starship.rs/install.sh | sh -s -- --yes
 
       # Terraform
       curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
@@ -57,15 +56,11 @@ write_files:
       wait_for_apt
       apt-get update && apt-get install -y terraform
 
-      # Snaps
+      # AWS & Snaps
       snap install google-cloud-cli --classic
       snap install kubectl --classic
-
-      # AWS CLI
       curl "https://awscli.amazonaws.com/awscli-exe-linux-${AWS_ARCH}.zip" -o "awscliv2.zip"
-      unzip -q awscliv2.zip
-      ./aws/install
-      rm -rf aws awscliv2.zip
+      unzip -q awscliv2.zip && ./aws/install && rm -rf aws awscliv2.zip
 
       # k9s
       curl -sL "https://github.com/derailed/k9s/releases/download/v0.27.4/k9s_Linux_${K9S_ARCH}.tar.gz" | tar xz -C /usr/local/bin/ k9s
@@ -82,24 +77,29 @@ write_files:
 
       # User level script
       sudo -u ubuntu -i bash <<'U_EOF'
-        # UV & NVM
+        # Oh My Zsh (Unattended)
+        if [ ! -d "$HOME/.oh-my-zsh" ]; then
+          sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+        fi
+
+        # ZSH Plugins
+        ZSH_CUSTOM="$HOME/.oh-my-zsh/custom"
+        mkdir -p ${ZSH_CUSTOM}/plugins
+        [ ! -d "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" ] && git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM}/plugins/zsh-autosuggestions
+        [ ! -d "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" ] && git clone https://github.com/zsh-users/zsh-syntax-highlighting ${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting
+        
+        # UV, NVM, LazyVim
         curl -LsSf https://astral.sh/uv/install.sh | sh
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-        
-        # LazyVim
-        git clone https://github.com/LazyVim/starter ~/.config/nvim
-        rm -rf ~/.config/nvim/.git
-        
-        # ZSH Plugins
-        mkdir -p ~/.zsh
-        git clone https://github.com/zsh-users/zsh-autosuggestions ~/.zsh/zsh-autosuggestions
-        git clone https://github.com/zsh-users/zsh-syntax-highlighting ~/.zsh/zsh-syntax-highlighting
-        
-        # ZSHRC Configuration
+        [ ! -d "$HOME/.config/nvim" ] && git clone https://github.com/LazyVim/starter ~/.config/nvim && rm -rf ~/.config/nvim/.git
+
+        # ZSHRC Final Configuration
         {
+          echo 'export ZSH="$HOME/.oh-my-zsh"'
+          echo 'ZSH_THEME="robbyrussell"'
+          echo 'plugins=(git zsh-autosuggestions zsh-syntax-highlighting gcloud terraform docker)'
+          echo 'source $ZSH/oh-my-zsh.sh'
           echo 'export PATH=$PATH:/usr/local/bin:/usr/local/go/bin:$HOME/go/bin:/snap/bin:$HOME/.local/bin'
-          echo 'source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh'
-          echo 'source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh'
           echo 'eval "$(starship init zsh)"'
           echo "alias vim='nvim'"
           echo 'fastfetch'
