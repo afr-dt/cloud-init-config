@@ -66,12 +66,20 @@ write_files:
         apt-get update && apt-get install -y terraform
       fi
 
-      # Helm (APT - The official way for Ubuntu)
+      # Helm (APT)
       if ! command -v helm >/dev/null; then
         curl https://baltocdn.com/helm/signing.asc | gpg --dearmor -o /usr/share/keyrings/helm.gpg
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" > /etc/apt/sources.list.d/helm-stable-debian.list
         wait_for_apt
         apt-get update && apt-get install -y helm
+      fi
+
+      # Ansible (Official PPA)
+      if ! command -v ansible >/dev/null; then
+        wait_for_apt
+        add-apt-repository --yes --update ppa:ansible/ansible
+        wait_for_apt
+        apt-get install -y ansible
       fi
 
       # Cloud CLIs & Snaps
@@ -130,7 +138,7 @@ write_files:
         export ZSH="$HOME/.oh-my-zsh"
         ZSH_THEME="robbyrussell"
         
-        plugins=(git zsh-autosuggestions zsh-syntax-highlighting kubectl node nvm golang tmux fzf terraform aws helm gcloud)
+        plugins=(git zsh-autosuggestions zsh-syntax-highlighting kubectl node nvm golang tmux fzf terraform aws helm gcloud ansible)
         source $ZSH/oh-my-zsh.sh
 
         # NVM Configuration
