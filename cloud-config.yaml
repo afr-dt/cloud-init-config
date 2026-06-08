@@ -66,12 +66,10 @@ write_files:
         apt-get update && apt-get install -y terraform
       fi
 
-      # Helm (APT)
+      # Helm (Reverted to Official Script for maximum reliability)
       if ! command -v helm >/dev/null; then
-        curl https://baltocdn.com/helm/signing.asc | gpg --dearmor -o /usr/share/keyrings/helm.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" > /etc/apt/sources.list.d/helm-stable-debian.list
-        wait_for_apt
-        apt-get update && apt-get install -y helm
+        echo "Installing Helm via official script..."
+        curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
       fi
 
       # Ansible (Official PPA)
@@ -137,7 +135,6 @@ write_files:
         cat <<'EOF_Z' > ~/.zshrc
         export ZSH="$HOME/.oh-my-zsh"
         ZSH_THEME="robbyrussell"
-        
         plugins=(git zsh-autosuggestions zsh-syntax-highlighting kubectl node nvm golang tmux fzf terraform aws helm gcloud ansible)
         source $ZSH/oh-my-zsh.sh
 
