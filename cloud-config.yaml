@@ -98,10 +98,73 @@ write_files:
       # 4. User Configuration (ubuntu)
       mkdir -p /home/ubuntu/.config
       cat <<EOF > /home/ubuntu/.config/starship.toml
-      add_newline = true
-      [character]
-      success_symbol = "[➜](bold green)"
-      error_symbol = "[➜](bold red)"
+        add_newline = true
+
+        format = """$directory$git_branch$git_status$kubernetes$helm$terraform$aws$gcloud$nodejs$golang$ansible$cmd_duration$line_break$character"""
+
+        [character]
+        success_symbol = "[➜](bold green)"
+        error_symbol = "[➜](bold red)"
+
+        [directory]
+        style = "bold cyan"
+
+        [git_branch]
+        symbol = " "
+        style = "bold magenta"
+
+        [git_status]
+        symbol = " "
+        style = "bold red"
+        format = '([\[$all_status$ahead_behind\]]($style) )'
+
+        [kubernetes]
+        disabled = false
+        symbol = "☸ "
+        style = "bold blue"
+        format = 'at [$symbol$context( \($namespace\))]($style) '
+
+        [helm]
+        disabled = false
+        symbol = "⎈ "
+        style = "bold white"
+
+        [terraform]
+        disabled = false
+        symbol = "󱆃 "
+        style = "bold purple"
+
+        [aws]
+        disabled = false
+        symbol = "󰸏 "
+        style = "bold yellow"
+        format = 'on [$symbol$profile(\($region\))]($style) '
+
+        [gcloud]
+        disabled = false
+        symbol = "󱇶 "
+        style = "bold blue"
+        format = 'on [$symbol$account(\($project\))]($style) '
+
+        [nodejs]
+        disabled = false
+        symbol = " "
+        style = "bold green"
+
+        [golang]
+        disabled = false
+        symbol = " "
+        style = "bold cyan"
+
+        [ansible]
+        disabled = false
+        symbol = "󱂚 "
+        style = "bold red"
+
+        [cmd_duration]
+        min_time = 500
+        style = "bold yellow"
+        format = 'took [$duration]($style) '
       EOF
       chown -R ubuntu:ubuntu /home/ubuntu/.config
 
@@ -133,23 +196,23 @@ write_files:
 
         # Final .zshrc Configuration
         cat <<'EOF_Z' > ~/.zshrc
-        export ZSH="$HOME/.oh-my-zsh"
-        ZSH_THEME="robbyrussell"
-        plugins=(git zsh-autosuggestions zsh-syntax-highlighting kubectl node nvm golang tmux fzf terraform aws helm gcloud ansible)
-        source $ZSH/oh-my-zsh.sh
+          export ZSH="$HOME/.oh-my-zsh"
+          ZSH_THEME="robbyrussell"
+          plugins=(git zsh-autosuggestions zsh-syntax-highlighting kubectl node nvm golang tmux fzf terraform aws helm gcloud ansible)
+          source $ZSH/oh-my-zsh.sh
 
-        # NVM Configuration
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-        [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+          # NVM Configuration
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
-        # Global Paths
-        export PATH=$PATH:/usr/local/bin:/usr/local/go/bin:$HOME/go/bin:/snap/bin:$HOME/.local/bin
+          # Global Paths
+          export PATH=$PATH:/usr/local/bin:/usr/local/go/bin:$HOME/go/bin:/snap/bin:$HOME/.local/bin
 
-        # Prompt & Tools
-        eval "$(starship init zsh)"
-        alias vim='nvim'
-        fastfetch
+          # Prompt & Tools
+          eval "$(starship init zsh)"
+          alias vim='nvim'
+          fastfetch
         EOF_Z
       U_EOF
 
