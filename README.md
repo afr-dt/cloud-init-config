@@ -12,10 +12,11 @@ A pre-configured Ubuntu `cloud-init` configuration for [Multipass](https://multi
 - **Programming**: Go (v1.23.5), Python (v3.13 managed by uv), Node.js (LTS managed by nvm), Build-essential.
 - **Python Management**: uv (Astral's fast Python manager).
 - **Node.js Management**: nvm (Node Version Manager).
-- **Infrastructure**: Terraform.
+- **Infrastructure**: Terraform, Ansible, Helm.
 - **Cloud CLIs**: AWS CLI v2, Google Cloud CLI (gcloud).
-- **Kubernetes**: kubectl, k9s.
-- **Utilities**: JQ, fzf, htop, tmux, unzip, curl, git.
+- **AI CLIs**: Antigravity CLI (agy), OpenCode CLI.
+- **Kubernetes**: kubectl, k9s, kubectx, kubecolor (aliased to kubectl).
+- **Utilities**: JQ, fzf, htop, tmux, unzip, curl, git, fastfetch.
 - **Editor**: Neovim (configured with LazyVim).
 - **Shell**: Zsh (Powerline fonts support) with **Starship Prompt**.
 
