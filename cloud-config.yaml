@@ -95,14 +95,6 @@ write_files:
         curl -sL "https://github.com/derailed/k9s/releases/download/v0.27.4/k9s_Linux_${K9S_ARCH}.tar.gz" | tar xz -C /usr/local/bin/ k9s
       fi
 
-      # Antigravity CLI & OpenCode CLI
-      if ! command -v antigravity >/dev/null; then
-        curl -fsSL https://antigravity.google/cli/install.sh | bash
-      fi
-      if ! command -v opencode >/dev/null; then
-        curl -fsSL https://opencode.ai/install | bash
-      fi
-
       # 4. User Configuration (ubuntu)
       mkdir -p /home/ubuntu/.config
       cat <<'EOF' > /home/ubuntu/.config/starship.toml
@@ -196,6 +188,16 @@ write_files:
         # LazyVim
         [ ! -d "$HOME/.config/nvim" ] && git clone https://github.com/LazyVim/starter ~/.config/nvim && rm -rf ~/.config/nvim/.git
 
+        # Antigravity CLI (Non-interactive)
+        if ! command -v agy >/dev/null; then
+          curl -fsSL https://antigravity.google/cli/install.sh | NONINTERACTIVE=1 bash
+        fi
+
+        # OpenCode CLI (Non-interactive)
+        if ! command -v opencode >/dev/null; then
+          curl -fsSL https://opencode.ai/install | NONINTERACTIVE=1 bash
+        fi
+
         # Final .zshrc Configuration
         cat <<'EOF_Z' > ~/.zshrc
         export ZSH="$HOME/.oh-my-zsh"
@@ -211,6 +213,12 @@ write_files:
         # Prompt & Tools
         eval "$(starship init zsh)"
         alias vim='nvim'
+
+        # opencode
+        export PATH=/home/ubuntu/.opencode/bin:$PATH
+        # Added by Antigravity CLI installer
+        export PATH="/home/ubuntu/.local/bin:$PATH"
+        
         fastfetch
       EOF_Z
       U_EOF
